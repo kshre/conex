@@ -1,0 +1,1 @@
+python biscuit/galen train --txt "./data/train/txt/*.txt" --annotations "./data/train/con/*" --model models/word-ls --format i2b2
