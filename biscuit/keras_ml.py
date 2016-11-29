@@ -29,15 +29,18 @@ K.set_learning_phase(0)
 
 # only load compile this model once per run (useful when predicting many times)
 lstm_model = None
+max_char_index = 50
+max_word_size = 25
 
 
-def train(train_X_ids, train_Y_ids, tag2id, 
+
+def train(train_X_ids, train_Y_ids, tag2id,
           W=None, epochs=20, val_X_ids=None, val_Y_ids=None):
     '''
     train()
 
     Build a Keras Bi-LSTM and return an encoding of it's parameters for predicting.
-    
+
     @param train_X_ids.  A list of tokenized sents (each sent is a list of num ids)
     @param train_Y_ids.  A list of concept labels parallel to train_X_ids
     @param W.            Optional initialized word embedding matrix.
@@ -47,16 +50,21 @@ def train(train_X_ids, train_Y_ids, tag2id,
 
     @return A tuple of encoded parameter weights and hyperparameters for predicting.
     '''
-    # gotta beef it up sometimes 
-    # (I know this supposed to be the same as 5x more epochs, 
+    # gotta beef it up sometimes
+    # (I know this supposed to be the same as 5x more epochs,
     #    but it doesnt feel like it)
     #train_X_ids = train_X_ids * 15
     #train_Y_ids = train_Y_ids * 15
 
     # build model
+
     input_dim    = max(map(max, train_X_ids)) + 1
     maxlen       = max(map(len, train_X_ids))
     num_tags     = len(tag2id)
+
+    
+
+
     lstm_model = create_bidirectional_lstm(input_dim, num_tags, maxlen, W=W)
 
     # turn each id in Y_ids into a onehot vector
@@ -71,7 +79,7 @@ def train(train_X_ids, train_Y_ids, tag2id,
     print 'training begin'
     batch_size = 64
     #'''
-    history = lstm_model.fit(train_X, train_Y, 
+    history = lstm_model.fit(train_X, train_Y,
                              batch_size=batch_size, nb_epoch=epochs, verbose=1)
     #'''
     #history = {}
@@ -112,7 +120,7 @@ def predict(keras_model_tuple, X_seq_ids):
     predict()
 
     Predict concept labels for X_seq_ids using Keras Bi-LSTM.
-    
+
     @param keras_model_tuple.  A tuple of encoded parameter weights and hyperparams.
     @param X_seq_ids.          A list of tokenized sents (each is a list of num ids)
 
@@ -234,7 +242,25 @@ def compute_stats(label, lstm_model, hyperparams, X, Y_ids):
 
     return scores
 
+def create_char_bidirectional_lstm(max_char_index, max_word_size):
 
+
+    sequence = Input(shape=(max_word_size,), dtype='int32')
+
+    embedding_size = 25
+    weights = None
+
+    embedding = Embedding(output_dim=embedding_size, input_dim=max_char_index, input_length=max_word_size,mask_zero=False, weights=weights)(sequence)
+
+    hidden_units = 25
+    char_lstm_f = LSTM(output_dim=hidden_units,return_sequences=True)(embedding)
+    char_lstm_r = LSTM(output_dim=hidden_units,return_sequences=True,go_backwards=True)(embedding)
+    merged = merge([char_lstm_f, char_lstm_r], mode='concat', concat_axis=-1)
+
+    after_dp = TimeDistributed(Dropout(0.5))(merged)
+    model = Model(input=sequence, output=after_dp)
+
+    return model
 
 def create_bidirectional_lstm(input_dim, nb_classes, maxlen, W=None):
     # model will expect: (nb_samples, timesteps, input_dim)
@@ -250,13 +276,14 @@ def create_bidirectional_lstm(input_dim, nb_classes, maxlen, W=None):
         embedding_size = 300
         weights = None
 
-    # Embedding layer
-    embedding = Embedding(output_dim=embedding_size, input_dim=input_dim, input_length=maxlen, mask_zero=False, weights=weights)(sequence)
-
+    # Embedding layers
+    embedding_char = create_char_bidirectional_lstm(max_char_index, max_word_size)
+    embedding_word = Embedding(output_dim=embedding_size, input_dim=input_dim, input_length=maxlen, mask_zero=False, weights=weights)(sequence)
+    merged_embeddings = merge([embedding_word, embedding_char], mode='concat', concat_axis=-1)
     # LSTM 1 input
     hidden_units = 128
-    lstm_f1 = LSTM(output_dim=hidden_units,return_sequences=True)(embedding)
-    lstm_r1 = LSTM(output_dim=hidden_units,return_sequences=True,go_backwards=True)(embedding)
+    lstm_f1 = LSTM(output_dim=hidden_units,return_sequences=True)(embedding_word)
+    lstm_r1 = LSTM(output_dim=hidden_units,return_sequences=True,go_backwards=True)(embedding_word)
     merged1 = merge([lstm_f1, lstm_r1], mode='concat', concat_axis=-1)
 
     # LSTM 2 input
@@ -320,4 +347,3 @@ def create_data_matrix_Y(Y_seq_onehots, nb_samples, maxlen, nb_classes):
         Y[i, maxlen - cur_len:, :] = Y_seq_onehots[i][:maxlen]
 
     return Y
-

@@ -131,7 +131,7 @@ class GalenModel:
 
         @param tok_sents.  A list of sentences, where each sentence is tokenized
                              into words
-        @param tags.       Parallel to `tokenized_sents`, 7-way labels for 
+        @param tags.       Parallel to `tokenized_sents`, 7-way labels for
                              concept spans
         @param val_sents.  Validation data. Same format as tokenized_sents
         @param val_tags.   Validation data. Same format as iob_nested_labels
@@ -191,7 +191,7 @@ class GalenModel:
 
 
 
-def generic_train(p_or_n, tokenized_sents, iob_nested_labels, 
+def generic_train(p_or_n, tokenized_sents, iob_nested_labels,
                   val_sents=None, val_labels=None, dev_split=None):
     '''
     generic_train()
@@ -201,7 +201,7 @@ def generic_train(p_or_n, tokenized_sents, iob_nested_labels,
     @param p_or_n.             A string that indicates "prose", "nonprose", or "all"
     @param tokenized_sents.    A list of sentences, where each sentence is tokenized
                                  into words
-    @param iob_nested_labels.  Parallel to `tokenized_sents`, 7-way labels for 
+    @param iob_nested_labels.  Parallel to `tokenized_sents`, 7-way labels for
                                  concept spans
     @param val_sents.          Validation data. Same format as tokenized_sents
     @param val_labels.         Validation data. Same format as iob_nested_labels
@@ -257,7 +257,7 @@ def generic_train(p_or_n, tokenized_sents, iob_nested_labels,
     '''
     for w in oov:
         print w
-    print 
+    print
     print len(oov)
     print len(freq)
     '''
@@ -302,12 +302,13 @@ def generic_train(p_or_n, tokenized_sents, iob_nested_labels,
             val_X.append(id_seq)
         # vectorize validation Y
         val_Y = [ [tag2id[y] for y in y_seq] for y_seq in val_labels ]
-        # rename 
+        # rename
         val_sents  = val_X
         val_labels = val_Y
 
+
     # train using lstm
-    clf, dev_score  = keras_ml.train(X_seq_ids, Y_labels, tag2id, 
+    clf, dev_score  = keras_ml.train(X_seq_ids, Y_labels, tag2id,
                                      val_X_ids=val_sents, val_Y_ids=val_labels)
 
     return vocab, clf, dev_score
@@ -396,4 +397,3 @@ def print_vec(f, label, vec):
             f.write(unicode('%7.3f' % featname))
         f.write(u'\n')
         start += COLUMNS
-
