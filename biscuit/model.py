@@ -385,13 +385,13 @@ def generic_predict(p_or_n, tokenized_sents, vocab, clf):
     text = ''
 
     for file in os.listdir(text_files):
-        print file
+        # print file
         f = open(text_files+'/'+file, 'r')
         contents = f.read()
         text += contents
 
     chars = set(text)
-    print "total chars", len(chars)
+    # print "total chars", len(chars)
 
     char_vocab = {}
     for char in chars:
@@ -402,8 +402,9 @@ def generic_predict(p_or_n, tokenized_sents, vocab, clf):
     for sent in tokenized_sents:
         id_word_seq = []
         for word in sent:
-                id_seq = [(char_vocab[letter] ) for letter in word ]
-                id_word_seq.append(id_seq)
+                    # quick fix - TODO: later handle extra chars in test set better
+                    id_seq = [(char_vocab[letter] if letter in char_vocab.keys() else char_vocab['a']) for letter in word ]
+                    id_word_seq.append(id_seq)
         X_char_ids.append(id_word_seq)
 
     char_maxlen = len(X_char_ids)

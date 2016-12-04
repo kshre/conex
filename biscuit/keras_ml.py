@@ -158,7 +158,7 @@ def predict(keras_model_tuple, X_seq_ids, X_char_ids):
 
     # format data for LSTM
     nb_samples = len(X_seq_ids)
-    X = create_data_matrix_X(X_seq_ids, nb_samples, maxlen, num_tags)
+    X = create_data_matrix_X(X_seq_ids, nb_samples, word_maxlen, num_tags)
     X_chars = create_data_matrix_X_chars(X_char_ids, nb_samples, word_maxlen, char_maxlen)
 
     # Predict tags using LSTM
@@ -169,13 +169,13 @@ def predict(keras_model_tuple, X_seq_ids, X_char_ids):
     predictions = []
     for i in range(nb_samples):
         num_words = len(X_seq_ids[i])
-        if num_words <= maxlen:
-            tags = p[i,maxlen-num_words:].argmax(axis=1)
+        if num_words <= word_maxlen:
+            tags = p[i,word_maxlen-num_words:].argmax(axis=1)
             predictions.append(tags.tolist())
         else:
             # if the sentence had more words than the longest sentence
             #   in the training set
-            residual_zeros = [ 0 for _ in range(num_words-maxlen) ]
+            residual_zeros = [ 0 for _ in range(num_words-word_maxlen) ]
             padded = list(p[i].argmax(axis=1)) + residual_zeros
             predictions.append(padded)
     print predictions
@@ -332,16 +332,17 @@ def create_data_matrix_X_chars(X_char_ids, nb_samples, word_maxlen, char_maxlen)
         # ignore tail of sentences longer than what was trained on
         #    (only happens during prediction)
         if word_maxlen - cur_sent_len < 0:
-            cur_len = maxlen
-            for word_len, j in enumerate(cur_word_lens):
-                if char_maxlen - word_len < 0:
-                    cur_word_lens[j] = char_maxlen
+            cur_len = word_maxlen
+
+        for j, word_len in enumerate(cur_word_lens):
+            if char_maxlen < word_len:
+                cur_word_lens[j] = char_maxlen
 
         # We pad on the left with zeros,
         #    so for short sentences the first elemnts in the matrix are zeros
         for k in range(len(X_char_ids[i])):
             if k < word_maxlen:
-                X[i, word_maxlen - len(X_char_ids[i]) + k, char_maxlen - cur_word_lens[k]:] = X_char_ids[i][k][:char_maxlen]
+                X[i, word_maxlen - len(X_char_ids[i]) + k, char_maxlen - cur_word_lens[k]:] = X_char_ids[i][k][:cur_word_lens[k]]
     return X
 
 def create_data_matrix_X(X_ids, nb_samples, maxlen, nb_classes):
