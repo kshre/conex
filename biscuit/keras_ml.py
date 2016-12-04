@@ -35,7 +35,7 @@ max_word_size = 25
 
 
 def train(train_word_X_ids, train_char_X_ids, train_Y_ids, tag2id,
-          W=None, epochs=20, val_X_ids=None, val_Y_ids=None):
+          W=None, epochs=10, val_X_ids=None, val_Y_ids=None):
     '''
     train()
 
