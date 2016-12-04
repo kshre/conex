@@ -22,7 +22,7 @@ from keras.utils.np_utils import to_categorical
 from keras.layers.wrappers import TimeDistributed
 from keras.preprocessing import sequence
 from keras.models import Model
-from keras.layers import Dense, Dropout, Embedding, LSTM, Input, merge
+from keras.layers import Dense, Dropout, Embedding, LSTM, Input, merge, Masking
 
 from keras import backend as K
 K.set_learning_phase(0)
@@ -34,7 +34,7 @@ max_word_size = 25
 
 
 
-def train(train_X_ids, train_Y_ids, tag2id,
+def train(train_word_X_ids, train_char_X_ids, train_Y_ids, tag2id,
           W=None, epochs=20, val_X_ids=None, val_Y_ids=None):
     '''
     train()
@@ -57,29 +57,41 @@ def train(train_X_ids, train_Y_ids, tag2id,
     #train_Y_ids = train_Y_ids * 15
 
     # build model
+    char_input_dim    = 83
+    """for i, sent in enumerate(train_char_X_ids):
+        max_char_id_in_sent = max(map(max, sent))
+        if(char_input_dim < max_char_id_in_sent):
+            char_input_dim = max_char_id_in_sent"""
 
-    input_dim    = max(map(max, train_X_ids)) + 1
-    maxlen       = max(map(len, train_X_ids))
+    char_maxlen        = 50
+    """for i, sent in enumerate(train_char_X_ids):
+        max_wordlen_in_sent = max(map(len, train_char_X_ids[i]))
+        if(char_maxlen < max_wordlen_in_sent):
+             char_maxlen = max_wordlen_in_sent
+    print char_maxlen, "please record this"
+    """
+
+
+    word_input_dim    = max(map(max, train_word_X_ids)) + 1
+    word_maxlen       = max(map(len, train_word_X_ids))
     num_tags     = len(tag2id)
 
-    
-
-
-    lstm_model = create_bidirectional_lstm(input_dim, num_tags, maxlen, W=W)
+    lstm_model = create_bidirectional_lstm(word_input_dim=word_input_dim, char_input_dim=char_input_dim, word_maxlen=word_maxlen, char_maxlen=char_maxlen, nb_classes=num_tags, W=W)
 
     # turn each id in Y_ids into a onehot vector
     train_Y_seq_onehots = [to_categorical(y, nb_classes=num_tags) for y in train_Y_ids]
 
     # format X and Y data
-    nb_samples = len(train_X_ids)
-    train_X = create_data_matrix_X(train_X_ids        , nb_samples, maxlen, num_tags)
-    train_Y = create_data_matrix_Y(train_Y_seq_onehots, nb_samples, maxlen, num_tags)
+    nb_samples = len(train_word_X_ids)
+    train_X_words = create_data_matrix_X(train_word_X_ids, nb_samples, word_maxlen, num_tags)
+    train_X_chars = create_data_matrix_X_chars(train_char_X_ids, nb_samples, word_maxlen, char_maxlen)
+    train_Y = create_data_matrix_Y(train_Y_seq_onehots, nb_samples, word_maxlen, num_tags)
 
     # fit model
     print 'training begin'
     batch_size = 64
     #'''
-    history = lstm_model.fit(train_X, train_Y,
+    history = lstm_model.fit([train_X_chars, train_X_words], train_Y,
                              batch_size=batch_size, nb_epoch=epochs, verbose=1)
     #'''
     #history = {}
@@ -88,14 +100,14 @@ def train(train_X_ids, train_Y_ids, tag2id,
     ######################################################################
 
     # information about fitting the model
-    hyperparams = batch_size, num_tags, maxlen
+    hyperparams = batch_size, num_tags, word_maxlen
     scores = {}
     scores['train'] = compute_stats('train', lstm_model, hyperparams,
-                                    train_X, train_Y_ids)
-    if val_X_ids:
-        val_X = create_data_matrix_X(val_X_ids, len(val_X_ids), maxlen, num_tags)
-        scores['dev'] = compute_stats('dev', lstm_model, hyperparams,
-                                      val_X, val_Y_ids)
+                                    train_X_words, train_X_chars, train_Y_ids)
+    #if val_X_ids:
+    #    val_X = create_data_matrix_X(val_X_ids, len(val_X_ids), word_maxlen, num_tags)
+    #    scores['dev'] = compute_stats('dev', lstm_model, hyperparams,
+    #                                  val_X, val_Y_ids)
     scores['history'] = history.history
 
     ######################################################################
@@ -108,14 +120,14 @@ def train(train_X_ids, train_Y_ids, tag2id,
     os.remove(param_filename)
 
     # return model back to cliner
-    keras_model_tuple = (lstm_model_str, input_dim, num_tags, maxlen)
+    keras_model_tuple = (lstm_model_str, word_input_dim, char_input_dim, num_tags, word_maxlen, char_maxlen)
 
     return keras_model_tuple, scores
 
 
 
 
-def predict(keras_model_tuple, X_seq_ids):
+def predict(keras_model_tuple, X_seq_ids, X_char_ids):
     '''
     predict()
 
@@ -129,11 +141,11 @@ def predict(keras_model_tuple, X_seq_ids):
     global lstm_model
 
     # unpack model metadata
-    lstm_model_str, input_dim, num_tags, maxlen = keras_model_tuple
+    lstm_model_str, word_input_dim, char_input_dim, num_tags, word_maxlen, char_maxlen = keras_model_tuple
 
     # build LSTM once (weird errors if re-compiled many times)
     if lstm_model is None:
-        lstm_model = create_bidirectional_lstm(input_dim, num_tags, maxlen)
+        lstm_model = create_bidirectional_lstm(word_input_dim=word_input_dim, char_input_dim=char_input_dim, word_maxlen=word_maxlen, char_maxlen=char_maxlen, nb_classes=num_tags)
 
     # dump serialized model out to file in order to load it
     param_filename = '/tmp/tmp_keras_weights-%d' % random.randint(0,9999)
@@ -147,11 +159,11 @@ def predict(keras_model_tuple, X_seq_ids):
     # format data for LSTM
     nb_samples = len(X_seq_ids)
     X = create_data_matrix_X(X_seq_ids, nb_samples, maxlen, num_tags)
+    X_chars = create_data_matrix_X_chars(X_char_ids, nb_samples, word_maxlen, char_maxlen)
 
     # Predict tags using LSTM
     batch_size = 128
-    p = lstm_model.predict(X, batch_size=batch_size)
-
+    p = lstm_model.predict([X_chars, X], batch_size=batch_size)
     # Greedy decoding of predictions
     # TODO - this could actually be the perfect spot for correcting O-before-I tags
     predictions = []
@@ -172,7 +184,7 @@ def predict(keras_model_tuple, X_seq_ids):
 
 
 
-def compute_stats(label, lstm_model, hyperparams, X, Y_ids):
+def compute_stats(label, lstm_model, hyperparams, X_words, X_chars, Y_ids):
     '''
     compute_stats()
 
@@ -187,8 +199,9 @@ def compute_stats(label, lstm_model, hyperparams, X, Y_ids):
     # un-pack hyperparameters
     batch_size, num_tags, maxlen = hyperparams
 
+
     # predict label probabilities
-    pred = lstm_model.predict(X, batch_size=batch_size)
+    pred = lstm_model.predict([X_chars, X_words], batch_size=batch_size)
 
     # choose the highest-probability labels
     nb_samples = len(Y_ids)
@@ -242,31 +255,27 @@ def compute_stats(label, lstm_model, hyperparams, X, Y_ids):
 
     return scores
 
-def create_char_bidirectional_lstm(max_char_index, max_word_size):
-
-
-    sequence = Input(shape=(max_word_size,), dtype='int32')
-
-    embedding_size = 25
-    weights = None
-
-    embedding = Embedding(output_dim=embedding_size, input_dim=max_char_index, input_length=max_word_size,mask_zero=False, weights=weights)(sequence)
-
-    hidden_units = 25
-    char_lstm_f = LSTM(output_dim=hidden_units,return_sequences=True)(embedding)
-    char_lstm_r = LSTM(output_dim=hidden_units,return_sequences=True,go_backwards=True)(embedding)
-    merged = merge([char_lstm_f, char_lstm_r], mode='concat', concat_axis=-1)
-
-    after_dp = TimeDistributed(Dropout(0.5))(merged)
-    model = Model(input=sequence, output=after_dp)
-
-    return model
-
-def create_bidirectional_lstm(input_dim, nb_classes, maxlen, W=None):
+def create_bidirectional_lstm(word_input_dim, char_input_dim, word_maxlen, char_maxlen, nb_classes, W=None):
     # model will expect: (nb_samples, timesteps, input_dim)
 
+    char_input = Input(shape=(char_maxlen,), dtype='int32')
+
+    char_embedding = Embedding(output_dim=50, input_dim=char_input_dim, input_length=char_maxlen, mask_zero=True)(char_input)
+
+    char_LSTM_f = LSTM(output_dim=50)(char_embedding)
+    char_LSTM_r = LSTM(output_dim=50, go_backwards=True)(char_embedding)
+    char_LSTM_fr = merge([char_LSTM_f, char_LSTM_r], mode='concat', concat_axis=-1)
+    char_encoder_fr = Model(input=char_input, output=char_LSTM_fr)
+
+    # apply char level encoder to every character sequence
+    char_seqs = Input(shape=(word_maxlen, char_maxlen), dtype='int32', name='char')
+    encoded_char_fr_states = TimeDistributed(char_encoder_fr)(char_seqs)
+    # m_encoded_char_fr_states = Masking(0.0)(encoded_char_fr_states)
+    m_encoded_char_fr_states = (encoded_char_fr_states)
+
+
     # input tensor
-    sequence = Input(shape=(maxlen,), dtype='int32')
+    word_input = Input(shape=(word_maxlen,), dtype='int32')
 
     # initialize Embedding layer with pretrained vectors
     if W is not None:
@@ -277,9 +286,9 @@ def create_bidirectional_lstm(input_dim, nb_classes, maxlen, W=None):
         weights = None
 
     # Embedding layers
-    embedding_char = create_char_bidirectional_lstm(max_char_index, max_word_size)
-    embedding_word = Embedding(output_dim=embedding_size, input_dim=input_dim, input_length=maxlen, mask_zero=False, weights=weights)(sequence)
-    merged_embeddings = merge([embedding_word, embedding_char], mode='concat', concat_axis=-1)
+    embedding_word = Embedding(output_dim=embedding_size, input_dim=word_input_dim, input_length=word_maxlen, mask_zero=False, weights=weights)(word_input)
+    merged_embeddings = merge([embedding_word, m_encoded_char_fr_states], mode='concat', concat_axis=-1)
+
     # LSTM 1 input
     hidden_units = 128
     lstm_f1 = LSTM(output_dim=hidden_units,return_sequences=True)(embedding_word)
@@ -298,7 +307,7 @@ def create_bidirectional_lstm(input_dim, nb_classes, maxlen, W=None):
     fc1 = TimeDistributed(Dense(output_dim=128, activation='sigmoid'))(after_dp)
     fc2 = TimeDistributed(Dense(output_dim=nb_classes, activation='softmax'))(fc1)
 
-    model = Model(input=sequence, output=fc2)
+    model = Model(input=[char_seqs, word_input], output=fc2)
 
     print
     print 'compiling model'
@@ -311,6 +320,29 @@ def create_bidirectional_lstm(input_dim, nb_classes, maxlen, W=None):
     return model
 
 
+def create_data_matrix_X_chars(X_char_ids, nb_samples, word_maxlen, char_maxlen):
+    X = np.zeros(shape=(nb_samples, word_maxlen, char_maxlen))
+
+    for i in range(nb_samples):
+        # length of cur sentence
+        cur_sent_len = len(X_char_ids[i])
+        # length of words in cur sentence
+        cur_word_lens = map(len, X_char_ids[i])
+
+        # ignore tail of sentences longer than what was trained on
+        #    (only happens during prediction)
+        if word_maxlen - cur_sent_len < 0:
+            cur_len = maxlen
+            for word_len, j in enumerate(cur_word_lens):
+                if char_maxlen - word_len < 0:
+                    cur_word_lens[j] = char_maxlen
+
+        # We pad on the left with zeros,
+        #    so for short sentences the first elemnts in the matrix are zeros
+        for k in range(len(X_char_ids[i])):
+            if k < word_maxlen:
+                X[i, word_maxlen - len(X_char_ids[i]) + k, char_maxlen - cur_word_lens[k]:] = X_char_ids[i][k][:char_maxlen]
+    return X
 
 def create_data_matrix_X(X_ids, nb_samples, maxlen, nb_classes):
     X = np.zeros((nb_samples, maxlen))

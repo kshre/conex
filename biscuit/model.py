@@ -118,7 +118,10 @@ class GalenModel:
         labels           = flatten([d.getTokenLabels()        for d in documents])
 
         # Call the internal method
-        self.fit(tokenized_sents, labels, dev_split=0.10)
+        # for now no split
+        # self.fit(tokenized_sents, labels, dev_split=0.10)
+        self.fit(tokenized_sents, labels)
+
 
         self._training_files = [ d.getName() for d in documents ]
 
@@ -279,6 +282,35 @@ def generic_train(p_or_n, tokenized_sents, iob_nested_labels,
                 vocab[w] = len(vocab) + 1
     vocab['oov'] = len(vocab) + 1
 
+    # character id sequences
+    text_files = 'data/train/txt'
+    text = ''
+
+    for file in os.listdir(text_files):
+        print file
+        f = open(text_files+'/'+file, 'r')
+        contents = f.read()
+        text += contents
+
+    chars = set(text)
+    print "total chars", len(chars)
+
+    char_vocab = {}
+    for char in chars:
+        char_vocab[char] = len(char_vocab) + 1
+
+    X_char_ids = []
+
+    for sent in tokenized_sents:
+        id_word_seq = []
+        for word in sent:
+                id_seq = [(char_vocab[letter] ) for letter in word ]
+                id_word_seq.append(id_seq)
+        X_char_ids.append(id_word_seq)
+
+    char_maxlen = len(X_char_ids)
+
+
     # vectorize tokenized sentences
     X_seq_ids = []
     for sent in tokenized_sents:
@@ -308,7 +340,7 @@ def generic_train(p_or_n, tokenized_sents, iob_nested_labels,
 
 
     # train using lstm
-    clf, dev_score  = keras_ml.train(X_seq_ids, Y_labels, tag2id,
+    clf, dev_score  = keras_ml.train(X_seq_ids, X_char_ids, Y_labels, tag2id,
                                      val_X_ids=val_sents, val_Y_ids=val_labels)
 
     return vocab, clf, dev_score
@@ -348,8 +380,36 @@ def generic_predict(p_or_n, tokenized_sents, vocab, clf):
 
     print '\tpredicting  labels ' + p_or_n
 
+    # character id sequences
+    text_files = 'data/train/txt'
+    text = ''
+
+    for file in os.listdir(text_files):
+        print file
+        f = open(text_files+'/'+file, 'r')
+        contents = f.read()
+        text += contents
+
+    chars = set(text)
+    print "total chars", len(chars)
+
+    char_vocab = {}
+    for char in chars:
+        char_vocab[char] = len(char_vocab) + 1
+
+    X_char_ids = []
+
+    for sent in tokenized_sents:
+        id_word_seq = []
+        for word in sent:
+                id_seq = [(char_vocab[letter] ) for letter in word ]
+                id_word_seq.append(id_seq)
+        X_char_ids.append(id_word_seq)
+
+    char_maxlen = len(X_char_ids)
+
     # Predict labels
-    predictions = keras_ml.predict(clf, X_seq_ids)
+    predictions = keras_ml.predict(clf, X_seq_ids, X_char_ids)
 
     # Format labels from output
     return predictions
