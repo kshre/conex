@@ -282,6 +282,34 @@ def generic_train(p_or_n, tokenized_sents, iob_nested_labels,
                 vocab[w] = len(vocab) + 1
     vocab['oov'] = len(vocab) + 1
 
+    # word embeddings >.>
+    filename = 'vectors.txt'
+    f = open(filename, 'r')
+    embedding_size = 400
+
+    model = {}
+    weights = {}
+    for line in f:
+        entry = line.split()
+        word = entry[0]
+        embedding = [float(val) for val in entry[1:]]
+        model[word] = embedding
+
+    for word in vocab.keys():
+        if word in model.keys():
+            id = vocab[word]
+            vector = model[word]
+            weights[id] = vector
+        else:
+            weights[vocab[word]] = model['<unk>']
+    weights['oov'] = model['<unk>']
+    #print weights[vocab['fever']]
+
+    weight_matrix = np.zeros((len(weights), embedding_size))
+    for i in range(1,len(weights)):
+        if i in weights.keys():
+            weight_matrix[i] = weights[i]
+
     # character id sequences
     text_files = 'data/train/txt'
     text = ''
@@ -340,7 +368,7 @@ def generic_train(p_or_n, tokenized_sents, iob_nested_labels,
 
 
     # train using lstm
-    clf, dev_score  = keras_ml.train(X_seq_ids, X_char_ids, Y_labels, tag2id,
+    clf, dev_score  = keras_ml.train(X_seq_ids, X_char_ids, Y_labels, tag2id, weight_matrix,
                                      val_X_ids=val_sents, val_Y_ids=val_labels)
 
     return vocab, clf, dev_score
