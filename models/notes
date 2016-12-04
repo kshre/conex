@@ -1,0 +1,7 @@
+Right now the the 10 epoch training has not been done
+
+
+TODO set up validation(dev) code properly - was disabled as a quickfix to obtain char embeddings results
+TODO print confusion matrix after every epoch
+
+

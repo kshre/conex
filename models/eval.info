@@ -1,19 +1,6 @@
 training was done with 20 epochs
 found severe overfitting
 
-The full model is:
-
-Glove 300 MIMIC2 + bi-LSTM char embeddings
-                  |
-                  V
-     2 bi-LSTM layers with DropOut 0.5
-                  |
-                  V
-          1 FC layer DropOut 0.5
-                  |
-                  V
-	Final softmax classifier
-
 
 Changes planned:
 * early stopping - epochs set to 10
