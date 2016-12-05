@@ -1,0 +1,48 @@
+I tensorflow/core/common_runtime/gpu/pool_allocator.cc:257] Raising pool_size_limit_ from 7764 to 8540
+I tensorflow/core/common_runtime/gpu/pool_allocator.cc:245] PoolAllocator: After 2146 get requests, put_count=12922 evicted_count=10000 eviction_rate=0.773874 and unsatisfied allocation rate=0
+ 3008/16315 [====>.........................] - ETA: 199s - loss: 0.0402I tensorflow/core/common_runtime/gpu/pool_allocator.cc:245] PoolAllocator: After 1160 get requests, put_count=7014 evicted_count=5000 eviction_rate=0.71286 and unsatisfied allocation rate=0
+ 3072/16315 [====>.........................] - ETA: 196s - loss: 0.0400I tensorflow/core/common_runtime/gpu/pool_allocator.cc:245] PoolAllocator: After 39732 get requests, put_count=40746 evicted_count=15000 eviction_rate=0.368134 and unsatisfied allocation rate=0.373502
+I tensorflow/core/common_runtime/gpu/pool_allocator.cc:257] Raising pool_size_limit_ from 9394 to 10333
+I tensorflow/core/common_runtime/gpu/pool_allocator.cc:245] PoolAllocator: After 2178 get requests, put_count=13117 evicted_count=10000 eviction_rate=0.762369 and unsatisfied allocation rate=0
+ 3136/16315 [====>.........................] - ETA: 193s - loss: 0.0399I tensorflow/core/common_runtime/gpu/pool_allocator.cc:245] PoolAllocator: After 1400 get requests, put_count=8433 evicted_count=6000 eviction_rate=0.711491 and unsatisfied allocation rate=0
+ 3200/16315 [====>.........................] - ETA: 191s - loss: 0.0398I tensorflow/core/common_runtime/gpu/pool_allocator.cc:245] PoolAllocator: After 820 get requests, put_count=4956 evicted_count=3000 eviction_rate=0.605327 and unsatisfied allocation rate=0
+ 3264/16315 [=====>........................] - ETA: 188s - loss: 0.0397I tensorflow/core/common_runtime/gpu/pool_allocator.cc:245] PoolAllocator: After 452 get requests, put_count=2702 evicted_count=1000 eviction_rate=0.370096 and unsatisfied allocation rate=0
+ 3328/16315 [=====>........................] - ETA: 186s - loss: 0.0395I tensorflow/core/common_runtime/gpu/pool_allocator.cc:245] PoolAllocator: After 476 get requests, put_count=2851 evicted_count=1000 eviction_rate=0.350754 and unsatisfied allocation rate=0
+ 3392/16315 [=====>........................] - ETA: 183s - loss: 0.0394I tensorflow/core/common_runtime/gpu/pool_allocator.cc:245] PoolAllocator: After 704 get requests, put_count=4216 evicted_count=2000 eviction_rate=0.474383 and unsatisfied allocation rate=0
+ 3456/16315 [=====>........................] - ETA: 181s - loss: 0.0392I tensorflow/core/common_runtime/gpu/pool_allocator.cc:245] PoolAllocator: After 1130 get requests, put_count=6793 evicted_count=4000 eviction_rate=0.588841 and unsatisfied allocation rate=0
+16315/16315 [==============================] - 156s - loss: 0.0228     
+Epoch 2/10
+16315/16315 [==============================] - 136s - loss: 0.0097     
+Epoch 3/10
+16315/16315 [==============================] - 136s - loss: 0.0064     
+Epoch 4/10
+16315/16315 [==============================] - 135s - loss: 0.0044     
+Epoch 5/10
+16315/16315 [==============================] - 135s - loss: 0.0031     
+Epoch 6/10
+16315/16315 [==============================] - 136s - loss: 0.0024     
+Epoch 7/10
+16315/16315 [==============================] - 136s - loss: 0.0018     
+Epoch 8/10
+16315/16315 [==============================] - 136s - loss: 0.0013     
+Epoch 9/10
+16315/16315 [==============================] - 137s - loss: 9.8038e-04     
+Epoch 10/10
+16315/16315 [==============================] - 137s - loss: 7.9886e-04     
+training done
+
+
+train
+          0    1    2    3    4    5    6  (gold)
+ 0     114768  103   43   32   42   45   14
+ 1       23 6948    3   11   21    0    0
+ 2       39    2 4551   11    0    5    0
+ 3       33   10    1 4778    0    0    3
+ 4       24    9    0    5 10174    0    4
+ 5       14    0    9    0    1 3836    4
+ 6        7    0    0    4   15    0 4074
+(pred)
+
+
+
+serializing model to models/word-ls

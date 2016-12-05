@@ -1,1 +1,3 @@
-python biscuit/galen train --txt "./data/train/txt/*.txt" --annotations "./data/train/con/*" --model models/word-ls --format i2b2 | tee "./models/train.full.log"
+date >> "./models/train.full.log";
+echo "===================================================" >> "./models/train.full.log"
+python biscuit/galen train --txt "./data/train/txt/*.txt" --annotations "./data/train/con/*" --model models/word-ls --format i2b2 | tee -a "./models/train.full.log"

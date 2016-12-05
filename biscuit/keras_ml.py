@@ -120,7 +120,7 @@ def train(train_word_X_ids, train_char_X_ids, train_Y_ids, tag2id,
     os.remove(param_filename)
 
     # return model back to cliner
-    keras_model_tuple = (lstm_model_str, word_input_dim, char_input_dim, num_tags, word_maxlen, char_maxlen)
+    keras_model_tuple = (lstm_model_str, word_input_dim, char_input_dim, num_tags, word_maxlen, char_maxlen, W)
 
     return keras_model_tuple, scores
 
@@ -141,11 +141,11 @@ def predict(keras_model_tuple, X_seq_ids, X_char_ids):
     global lstm_model
 
     # unpack model metadata
-    lstm_model_str, word_input_dim, char_input_dim, num_tags, word_maxlen, char_maxlen = keras_model_tuple
+    lstm_model_str, word_input_dim, char_input_dim, num_tags, word_maxlen, char_maxlen, W = keras_model_tuple
 
     # build LSTM once (weird errors if re-compiled many times)
     if lstm_model is None:
-        lstm_model = create_bidirectional_lstm(word_input_dim=word_input_dim, char_input_dim=char_input_dim, word_maxlen=word_maxlen, char_maxlen=char_maxlen, nb_classes=num_tags)
+        lstm_model = create_bidirectional_lstm(word_input_dim=word_input_dim, char_input_dim=char_input_dim, word_maxlen=word_maxlen, char_maxlen=char_maxlen, nb_classes=num_tags, W=W)
 
     # dump serialized model out to file in order to load it
     param_filename = '/tmp/tmp_keras_weights-%d' % random.randint(0,9999)

@@ -21,7 +21,7 @@ import keras_ml
 from documents import labels as tag2id, id2tag
 from tools import flatten
 from tools import pickle_dump, load_pickled_obj
-
+import numpy as np
 
 
 class GalenModel:
@@ -301,8 +301,8 @@ def generic_train(p_or_n, tokenized_sents, iob_nested_labels,
             vector = model[word]
             weights[id] = vector
         else:
-            weights[vocab[word]] = model['<unk>']
-    weights['oov'] = model['<unk>']
+            weights[vocab[word]] = model['unkwn']
+    weights['oov'] = model['unkwn']
     #print weights[vocab['fever']]
 
     weight_matrix = np.zeros((len(weights), embedding_size))
