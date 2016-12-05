@@ -1,7 +1,7 @@
-training was done with 20 epochs
+training was done with 10 epochs
 found severe overfitting
 
-
-Changes planned:
-* early stopping - epochs set to 10
-* dropout for LSTM internally set to 0.2
+Changes made:
+* early stopping - epochs set to 5 
+* dropout for FC layer .25
+* removed bi-LSTM layer

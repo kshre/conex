@@ -1,3 +1,5 @@
+# 5 epochs, one bi-LSTM layer, FC dropout = 0.25
+
 ######################################################################
 #  CliNER - keras_ml.py                                              #
 #                                                                    #
@@ -35,7 +37,7 @@ max_word_size = 25
 
 
 def train(train_word_X_ids, train_char_X_ids, train_Y_ids, tag2id,
-          W=None, epochs=10, val_X_ids=None, val_Y_ids=None):
+          W=None, epochs=5, val_X_ids=None, val_Y_ids=None):
     '''
     train()
 
@@ -296,16 +298,17 @@ def create_bidirectional_lstm(word_input_dim, char_input_dim, word_maxlen, char_
     merged1 = merge([lstm_f1, lstm_r1], mode='concat', concat_axis=-1)
 
     # LSTM 2 input
-    lstm_f2 = LSTM(output_dim=hidden_units,return_sequences=True)(merged1)
-    lstm_r2 = LSTM(output_dim=hidden_units,return_sequences=True,go_backwards=True)(merged1)
-    merged2 = merge([lstm_f2, lstm_r2], mode='concat', concat_axis=-1)
+    #lstm_f2 = LSTM(output_dim=hidden_units,return_sequences=True)(merged1)
+    #lstm_r2 = LSTM(output_dim=hidden_units,return_sequences=True,go_backwards=True)(merged1)
+    #merged2 = merge([lstm_f2, lstm_r2], mode='concat', concat_axis=-1)
 
     # Dropout
-    after_dp = TimeDistributed(Dropout(0.5))(merged2)
+    after_dp = TimeDistributed(Dropout(0.5))(merged1)
 
     # fully connected layer
     fc1 = TimeDistributed(Dense(output_dim=128, activation='sigmoid'))(after_dp)
-    fc2 = TimeDistributed(Dense(output_dim=nb_classes, activation='softmax'))(fc1)
+    after_dp2 = TimeDistributed(Dropout(0.25))(fc1)
+    fc2 = TimeDistributed(Dense(output_dim=nb_classes, activation='softmax'))(after_dp2)
 
     model = Model(input=[char_seqs, word_input], output=fc2)
 
