@@ -1,20 +1,16 @@
-# 5 epochs, one bi-LSTM layer, FC dropout = 0.25
-
 ######################################################################
 #  CliNER - keras_ml.py                                              #
 #                                                                    #
-#  Willie Boag                                                       #
+#  Willie Boag, Saurabh Kulshreshtha, Shashwath Ananthakrishna       #
 #                                                                    #
 #  Purpose: An interface to the Keras library.                       #
 ######################################################################
-
-__author__ = 'Willie Boag'
-__date__   = 'Aug. 18, 2016'
 
 import numpy as np
 import os
 import random
 import time
+import model
 
 import tensorflow as tf
 tf.python.control_flow_ops = tf
@@ -27,24 +23,31 @@ from keras.models import Model
 from keras.layers import Dense, Dropout, Embedding, LSTM, Input, merge, Masking
 
 from keras import backend as K
+
+# this may have been a hack to make things work, check again
 K.set_learning_phase(0)
 
 # only load compile this model once per run (useful when predicting many times)
 lstm_model = None
-max_char_index = 50
-max_word_size = 25
+
+# what is this?
+#max_char_index = 50
+# and this?
+#max_word_size = 25
 
 
 
 def train(train_word_X_ids, train_char_X_ids, train_Y_ids, tag2id,
-          W=None, epochs=5, val_X_ids=None, val_Y_ids=None):
+          W=None, len_char_vocab=None, epochs=5, val_X_ids=None, val_X_char_ids = None, val_Y_ids=None):
     '''
     train()
 
     Build a Keras Bi-LSTM and return an encoding of it's parameters for predicting.
 
-    @param train_X_ids.  A list of tokenized sents (each sent is a list of num ids)
-    @param train_Y_ids.  A list of concept labels parallel to train_X_ids
+    @param train_word_X_ids.  A list of tokenized sents (each sent is a list of word num ids)
+    @param train_char_X_ids.  A list of list of tokenized words (each word is a list of char num ids)
+    @param train_Y_ids.  A list of concept labels parallel to train_word_X_ids
+    @param tag2id.       Tag to id of label id dictionary
     @param W.            Optional initialized word embedding matrix.
     @param epochs.       Optional number of epochs to train model for.
     @param val_X_ids.    A list of tokenized sents (each sent is a list of num ids)
@@ -52,27 +55,25 @@ def train(train_word_X_ids, train_char_X_ids, train_Y_ids, tag2id,
 
     @return A tuple of encoded parameter weights and hyperparameters for predicting.
     '''
-    # gotta beef it up sometimes
-    # (I know this supposed to be the same as 5x more epochs,
-    #    but it doesnt feel like it)
-    #train_X_ids = train_X_ids * 15
-    #train_Y_ids = train_Y_ids * 15
 
     # build model
-    char_input_dim    = 83
-    """for i, sent in enumerate(train_char_X_ids):
+
+    char_input_dim = len_char_vocab
+    '''
+    for i, sent in enumerate(train_char_X_ids):
         max_char_id_in_sent = max(map(max, sent))
         if(char_input_dim < max_char_id_in_sent):
-            char_input_dim = max_char_id_in_sent"""
-
-    char_maxlen        = 50
-    """for i, sent in enumerate(train_char_X_ids):
+            char_input_dim = max_char_id_in_sent
+    print char_input_dim
+    '''
+    char_maxlen = 50
+    """
+    for i, sent in enumerate(train_char_X_ids):
         max_wordlen_in_sent = max(map(len, train_char_X_ids[i]))
         if(char_maxlen < max_wordlen_in_sent):
              char_maxlen = max_wordlen_in_sent
     print char_maxlen, "please record this"
     """
-
 
     word_input_dim    = max(map(max, train_word_X_ids)) + 1
     word_maxlen       = max(map(len, train_word_X_ids))
@@ -264,15 +265,15 @@ def create_bidirectional_lstm(word_input_dim, char_input_dim, word_maxlen, char_
 
     char_embedding = Embedding(output_dim=50, input_dim=char_input_dim, input_length=char_maxlen, mask_zero=True)(char_input)
 
-    char_LSTM_f = LSTM(output_dim=50)(char_embedding)
-    char_LSTM_r = LSTM(output_dim=50, go_backwards=True)(char_embedding)
+    char_LSTM_f = LSTM(output_dim=100)(char_embedding)
+    char_LSTM_r = LSTM(output_dim=100, go_backwards=True)(char_embedding)
     char_LSTM_fr = merge([char_LSTM_f, char_LSTM_r], mode='concat', concat_axis=-1)
     char_encoder_fr = Model(input=char_input, output=char_LSTM_fr)
 
     # apply char level encoder to every character sequence
     char_seqs = Input(shape=(word_maxlen, char_maxlen), dtype='int32', name='char')
     encoded_char_fr_states = TimeDistributed(char_encoder_fr)(char_seqs)
-    # m_encoded_char_fr_states = Masking(0.0)(encoded_char_fr_states)
+    #m_encoded_char_fr_states = Masking(0.0)(encoded_char_fr_states)
     m_encoded_char_fr_states = (encoded_char_fr_states)
 
 
@@ -293,8 +294,8 @@ def create_bidirectional_lstm(word_input_dim, char_input_dim, word_maxlen, char_
 
     # LSTM 1 input
     hidden_units = 128
-    lstm_f1 = LSTM(output_dim=hidden_units,return_sequences=True)(embedding_word)
-    lstm_r1 = LSTM(output_dim=hidden_units,return_sequences=True,go_backwards=True)(embedding_word)
+    lstm_f1 = LSTM(output_dim=hidden_units,return_sequences=True)(merged_embeddings)
+    lstm_r1 = LSTM(output_dim=hidden_units,return_sequences=True,go_backwards=True)(merged_embeddings)
     merged1 = merge([lstm_f1, lstm_r1], mode='concat', concat_axis=-1)
 
     # LSTM 2 input

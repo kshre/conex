@@ -119,9 +119,7 @@ class GalenModel:
 
         # Call the internal method
         # for now no split
-        # self.fit(tokenized_sents, labels, dev_split=0.10)
-        self.fit(tokenized_sents, labels)
-
+        self.fit(tokenized_sents, labels, dev_split=0.10)
 
         self._training_files = [ d.getName() for d in documents ]
 
@@ -285,6 +283,7 @@ def generic_train(p_or_n, tokenized_sents, iob_nested_labels,
     # word embeddings >.>
     filename = 'vectors.txt'
     f = open(filename, 'r')
+
     embedding_size = 400
 
     model = {}
@@ -304,31 +303,39 @@ def generic_train(p_or_n, tokenized_sents, iob_nested_labels,
             weights[vocab[word]] = model['unkwn']
     weights['oov'] = model['unkwn']
     #print weights[vocab['fever']]
+    #print len(model)
 
     weight_matrix = np.zeros((len(weights), embedding_size))
     for i in range(1,len(weights)):
         if i in weights.keys():
             weight_matrix[i] = weights[i]
 
+    print weight_matrix.shape
+
     # character id sequences
     text_files = 'data/train/txt'
     text = ''
 
     for file in os.listdir(text_files):
-        print file
+        #print file
         f = open(text_files+'/'+file, 'r')
         contents = f.read()
         text += contents
 
     chars = set(text)
-    print "total chars", len(chars)
+    #print "total chars", len(chars)
 
     char_vocab = {}
     for char in chars:
         char_vocab[char] = len(char_vocab) + 1
+    #print chars
+
+    #sleazty hack for not finding _ in char vocab
+    #char_vocab['_'] = len(char_vocab) + 1
+    #char_vocab['j'] = len(char_vocab) + 1
 
     X_char_ids = []
-
+    #print tokenized_sents
     for sent in tokenized_sents:
         id_word_seq = []
         for word in sent:
@@ -353,6 +360,8 @@ def generic_train(p_or_n, tokenized_sents, iob_nested_labels,
     #val_sents  = val_sents[ :5]
     #val_labels = val_labels[:5]
 
+    validation_sent = val_sents
+
     # if there is specified validation data, then vectorize it
     if val_sents:
         # vectorize validation X
@@ -366,10 +375,28 @@ def generic_train(p_or_n, tokenized_sents, iob_nested_labels,
         val_sents  = val_X
         val_labels = val_Y
 
+    # vectorizing validation for char level
+    if validation_sent:
+        # vectorize validation X
+        val_X_char = []
+        for sent in validation_sent:
+            id_word_seq = []
+            for word in sent:
+                id_seq = [(char_vocab[letter] ) for letter in word ]
+                id_word_seq.append(id_seq)
+            val_X_char.append(id_word_seq)
+        # vectorize validation Y
 
+        # rename
+
+        val_chars = val_X_char
+
+
+    #print len_char_vocab
+    len_char_vocab = len(char_vocab)
     # train using lstm
-    clf, dev_score  = keras_ml.train(X_seq_ids, X_char_ids, Y_labels, tag2id, weight_matrix,
-                                     val_X_ids=val_sents, val_Y_ids=val_labels)
+    clf, dev_score  = keras_ml.train(X_seq_ids, X_char_ids, Y_labels, tag2id, weight_matrix, len_char_vocab,
+                                     val_X_ids=val_sents, val_X_char_ids = val_chars, val_Y_ids=val_labels)
 
     return vocab, clf, dev_score
 
