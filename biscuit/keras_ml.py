@@ -290,12 +290,12 @@ def create_bidirectional_lstm(word_input_dim, char_input_dim, word_maxlen, char_
 
     # Embedding layers
     embedding_word = Embedding(output_dim=embedding_size, input_dim=word_input_dim, input_length=word_maxlen, mask_zero=False, weights=weights)(word_input)
-    merged_embeddings = merge([embedding_word, m_encoded_char_fr_states], mode='concat', concat_axis=-1)
+    #merged_embeddings = merge([embedding_word, m_encoded_char_fr_states], mode='concat', concat_axis=-1)
 
     # LSTM 1 input
     hidden_units = 128
-    lstm_f1 = LSTM(output_dim=hidden_units,return_sequences=True)(merged_embeddings)
-    lstm_r1 = LSTM(output_dim=hidden_units,return_sequences=True,go_backwards=True)(merged_embeddings)
+    lstm_f1 = LSTM(output_dim=hidden_units,return_sequences=True)(embedding_word)
+    lstm_r1 = LSTM(output_dim=hidden_units,return_sequences=True,go_backwards=True)(embedding_word)
     merged1 = merge([lstm_f1, lstm_r1], mode='concat', concat_axis=-1)
 
     # LSTM 2 input
