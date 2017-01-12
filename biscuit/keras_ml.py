@@ -34,8 +34,10 @@ lstm_model = None
 max_char_index = 50
 max_word_size = 25
 
+
+
 def train(train_word_X_ids, train_char_X_ids, train_Y_ids, tag2id,
-          W=None, epochs=1, val_X_ids=None, val_Y_ids=None):
+          W=None, epochs=2, val_X_ids=None, val_X_char_ids=None, val_Y_ids=None):
     '''
     train()
 
@@ -57,7 +59,7 @@ def train(train_word_X_ids, train_char_X_ids, train_Y_ids, tag2id,
     #train_Y_ids = train_Y_ids * 15
 
     # build model
-    char_input_dim    = 83
+    char_input_dim    = 89
     """for i, sent in enumerate(train_char_X_ids):
         max_char_id_in_sent = max(map(max, sent))
         if(char_input_dim < max_char_id_in_sent):
@@ -104,10 +106,11 @@ def train(train_word_X_ids, train_char_X_ids, train_Y_ids, tag2id,
     scores = {}
     scores['train'] = compute_stats('train', lstm_model, hyperparams,
                                     train_X_words, train_X_chars, train_Y_ids)
-    #if val_X_ids:
-    #    val_X = create_data_matrix_X(val_X_ids, len(val_X_ids), word_maxlen, num_tags)
-    #    scores['dev'] = compute_stats('dev', lstm_model, hyperparams,
-    #                                  val_X, val_Y_ids)
+    if val_X_ids and val_X_char_ids:
+        val_X = create_data_matrix_X(val_X_ids, len(val_X_ids), word_maxlen, num_tags)
+        val_X_char_ids = create_data_matrix_X_chars(val_X_char_ids, len(val_X_char_ids), word_maxlen, char_maxlen)
+        scores['dev'] = compute_stats('dev', lstm_model, hyperparams,
+                                      val_X, val_X_char_ids, val_Y_ids)
     scores['history'] = history.history
 
     ######################################################################
@@ -305,8 +308,8 @@ def create_bidirectional_lstm(word_input_dim, char_input_dim, word_maxlen, char_
 
     # fully connected layer
     fc1 = TimeDistributed(Dense(output_dim=128, activation='sigmoid'))(after_dp)
-    after_dp2 = TimeDistributed(Dropout(0.25))(fc1)
-    fc2 = TimeDistributed(Dense(output_dim=nb_classes, activation='softmax'))(after_dp2)
+    #after_dp2 = TimeDistributed(Dropout(0.25))(fc1)
+    fc2 = TimeDistributed(Dense(output_dim=nb_classes, activation='softmax'))(fc1)
 
     model = Model(input=[char_seqs, word_input], output=fc2)
 

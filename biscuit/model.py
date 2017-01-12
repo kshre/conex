@@ -119,8 +119,9 @@ class GalenModel:
 
         # Call the internal method
         # for now no split
-        # self.fit(tokenized_sents, labels, dev_split=0.10)
-        self.fit(tokenized_sents, labels)
+        self.fit(tokenized_sents, labels, dev_split=0.10)
+
+        #self.fit(tokenized_sents, labels)
 
 
         self._training_files = [ d.getName() for d in documents ]
@@ -216,7 +217,7 @@ def generic_train(p_or_n, tokenized_sents, iob_nested_labels,
 
     # if you should split the data into train/dev yourself
     #if (not val_sents) and (dev_split > 0.0) and (len(tokenized_sents)>1000):
-    if (not val_sents) and (dev_split > 0.0) and (len(tokenized_sents)>10):
+    if (not val_sents) and (dev_split > 0.0) and (len(tokenized_sents)>1000):
 
         p = int(dev_split*100)
         print '\tCreating %d/%d train/dev split' % (100-p,p)
@@ -234,8 +235,8 @@ def generic_train(p_or_n, tokenized_sents, iob_nested_labels,
         val_labels   = iob_nested_labels[:ind ]
         train_labels = iob_nested_labels[ ind:]
 
-        tokenized_sents   = train_sents
-        iob_nested_labels = train_labels
+        #tokenized_sents   = train_sents
+        #iob_nested_labels = train_labels
 
 
     print '\tvectorizing words', p_or_n
@@ -353,6 +354,8 @@ def generic_train(p_or_n, tokenized_sents, iob_nested_labels,
     #val_sents  = val_sents[ :5]
     #val_labels = val_labels[:5]
 
+    validation_sent = val_sents
+
     # if there is specified validation data, then vectorize it
     if val_sents:
         # vectorize validation X
@@ -366,10 +369,25 @@ def generic_train(p_or_n, tokenized_sents, iob_nested_labels,
         val_sents  = val_X
         val_labels = val_Y
 
+    if validation_sent:
+        # vectorize validation X
+        val_X_char = []
+        for sent in validation_sent:
+            id_word_seq = []
+            for word in sent:
+                id_seq = [(char_vocab[letter] ) for letter in word ]
+                id_word_seq.append(id_seq)
+            val_X_char.append(id_word_seq)
+        # vectorize validation Y
+
+        # rename
+
+        val_chars = val_X_char
+
 
     # train using lstm
     clf, dev_score  = keras_ml.train(X_seq_ids, X_char_ids, Y_labels, tag2id, weight_matrix,
-                                     val_X_ids=val_sents, val_Y_ids=val_labels)
+                                     val_X_ids=val_sents, val_X_char_ids=val_chars, val_Y_ids=val_labels)
 
     return vocab, clf, dev_score
 
