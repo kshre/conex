@@ -34,10 +34,8 @@ lstm_model = None
 max_char_index = 50
 max_word_size = 25
 
-
-
 def train(train_word_X_ids, train_char_X_ids, train_Y_ids, tag2id,
-          W=None, epochs=5, val_X_ids=None, val_Y_ids=None):
+          W=None, epochs=1, val_X_ids=None, val_Y_ids=None):
     '''
     train()
 
@@ -293,8 +291,8 @@ def create_bidirectional_lstm(word_input_dim, char_input_dim, word_maxlen, char_
 
     # LSTM 1 input
     hidden_units = 128
-    lstm_f1 = LSTM(output_dim=hidden_units,return_sequences=True)(embedding_word)
-    lstm_r1 = LSTM(output_dim=hidden_units,return_sequences=True,go_backwards=True)(embedding_word)
+    lstm_f1 = LSTM(output_dim=hidden_units,return_sequences=True)(merged_embeddings)
+    lstm_r1 = LSTM(output_dim=hidden_units,return_sequences=True,go_backwards=True)(merged_embeddings)
     merged1 = merge([lstm_f1, lstm_r1], mode='concat', concat_axis=-1)
 
     # LSTM 2 input
