@@ -1,0 +1,2 @@
+python biscuit/galen evaluate --predictions data/dev_predictions/conex-test/ --gold data/dev/con/ --format i2b2
+

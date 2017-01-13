@@ -1,0 +1,1 @@
+python biscuit/galen predict --txt "data/dev/txt/*.txt" --model models/word-ls --out data/dev_predictions/conex-test --format i2b2
