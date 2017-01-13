@@ -35,7 +35,7 @@ max_char_index = 50
 max_word_size = 25
 
 def train(train_word_X_ids, train_char_X_ids, train_Y_ids, tag2id,
-          W=None, epochs=1, val_X_ids=None, val_Y_ids=None):
+          W=None, epochs=2, val_X_ids=None, val_Y_ids=None):
     '''
     train()
 
@@ -290,9 +290,9 @@ def create_bidirectional_lstm(word_input_dim, char_input_dim, word_maxlen, char_
     merged_embeddings = merge([embedding_word, m_encoded_char_fr_states], mode='concat', concat_axis=-1)
 
     # LSTM 1 input
-    hidden_units = 128
-    lstm_f1 = LSTM(output_dim=hidden_units,return_sequences=True)(merged_embeddings)
-    lstm_r1 = LSTM(output_dim=hidden_units,return_sequences=True,go_backwards=True)(merged_embeddings)
+    hidden_units = 256
+    lstm_f1 = LSTM(output_dim=hidden_units,return_sequences=True)(embedding_word)
+    lstm_r1 = LSTM(output_dim=hidden_units,return_sequences=True,go_backwards=True)(embedding_word)
     merged1 = merge([lstm_f1, lstm_r1], mode='concat', concat_axis=-1)
 
     # LSTM 2 input
@@ -304,8 +304,8 @@ def create_bidirectional_lstm(word_input_dim, char_input_dim, word_maxlen, char_
     after_dp = TimeDistributed(Dropout(0.5))(merged1)
 
     # fully connected layer
-    fc1 = TimeDistributed(Dense(output_dim=128, activation='sigmoid'))(after_dp)
-    after_dp2 = TimeDistributed(Dropout(0.25))(fc1)
+    fc1 = TimeDistributed(Dense(output_dim=256, activation='sigmoid'))(after_dp)
+    after_dp2 = TimeDistributed(Dropout(0.50))(fc1)
     fc2 = TimeDistributed(Dense(output_dim=nb_classes, activation='softmax'))(after_dp2)
 
     model = Model(input=[char_seqs, word_input], output=fc2)
