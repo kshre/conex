@@ -25,6 +25,7 @@ from keras.layers.wrappers import TimeDistributed
 from keras.preprocessing import sequence
 from keras.models import Model
 from keras.layers import Dense, Dropout, Embedding, LSTM, Input, merge, Masking
+from keras.callbacks import TensorBoard
 
 from keras import backend as K
 K.set_learning_phase(0)
@@ -35,7 +36,7 @@ max_char_index = 50
 max_word_size = 25
 
 def train(train_word_X_ids, train_char_X_ids, train_Y_ids, tag2id,
-          W=None, epochs=2, val_X_ids=None, val_Y_ids=None):
+          W=None, epochs=5, val_X_ids=None, val_Y_ids=None):
     '''
     train()
 
@@ -57,7 +58,7 @@ def train(train_word_X_ids, train_char_X_ids, train_Y_ids, tag2id,
     #train_Y_ids = train_Y_ids * 15
 
     # build model
-    char_input_dim    = 83
+    char_input_dim    = 89
     """for i, sent in enumerate(train_char_X_ids):
         max_char_id_in_sent = max(map(max, sent))
         if(char_input_dim < max_char_id_in_sent):
@@ -93,6 +94,9 @@ def train(train_word_X_ids, train_char_X_ids, train_Y_ids, tag2id,
     #'''
     history = lstm_model.fit([train_X_chars, train_X_words], train_Y,
                              batch_size=batch_size, nb_epoch=epochs, verbose=1)
+
+    TensorBoard(log_dir='./logs', histogram_freq=0, write_graph=True, write_images=False)
+
     #'''
     #history = {}
     print 'training done'
@@ -260,19 +264,16 @@ def create_bidirectional_lstm(word_input_dim, char_input_dim, word_maxlen, char_
 
     char_input = Input(shape=(char_maxlen,), dtype='int32')
 
-    char_embedding = Embedding(output_dim=50, input_dim=char_input_dim, input_length=char_maxlen, mask_zero=True)(char_input)
+    char_embedding = Embedding(output_dim=25, input_dim=char_input_dim, input_length=char_maxlen, mask_zero=True)(char_input)
 
-    char_LSTM_f = LSTM(output_dim=50)(char_embedding)
-    char_LSTM_r = LSTM(output_dim=50, go_backwards=True)(char_embedding)
+    char_LSTM_f = LSTM(output_dim=25)(char_embedding)
+    char_LSTM_r = LSTM(output_dim=25, go_backwards=True)(char_embedding)
     char_LSTM_fr = merge([char_LSTM_f, char_LSTM_r], mode='concat', concat_axis=-1)
     char_encoder_fr = Model(input=char_input, output=char_LSTM_fr)
 
     # apply char level encoder to every character sequence
     char_seqs = Input(shape=(word_maxlen, char_maxlen), dtype='int32', name='char')
     encoded_char_fr_states = TimeDistributed(char_encoder_fr)(char_seqs)
-    # m_encoded_char_fr_states = Masking(0.0)(encoded_char_fr_states)
-    m_encoded_char_fr_states = (encoded_char_fr_states)
-
 
     # input tensor
     word_input = Input(shape=(word_maxlen,), dtype='int32')
@@ -287,26 +288,29 @@ def create_bidirectional_lstm(word_input_dim, char_input_dim, word_maxlen, char_
 
     # Embedding layers
     embedding_word = Embedding(output_dim=embedding_size, input_dim=word_input_dim, input_length=word_maxlen, mask_zero=False, weights=weights)(word_input)
-    merged_embeddings = merge([embedding_word, m_encoded_char_fr_states], mode='concat', concat_axis=-1)
+    smaller_embedding = TimeDistributed(Dense(output_dim=100, activation='sigmoid'))(embedding_word)
+    merged_embeddings = merge([smaller_embedding, encoded_char_fr_states], mode='concat', concat_axis=-1)
 
     # LSTM 1 input
-    hidden_units = 256
-    lstm_f1 = LSTM(output_dim=hidden_units,return_sequences=True)(embedding_word)
-    lstm_r1 = LSTM(output_dim=hidden_units,return_sequences=True,go_backwards=True)(embedding_word)
+    hidden_units = 128
+    lstm_f1 = LSTM(output_dim=hidden_units, return_sequences=True)(merged_embeddings)
+    lstm_r1 = LSTM(output_dim=hidden_units, return_sequences=True, go_backwards=True)(merged_embeddings)
     merged1 = merge([lstm_f1, lstm_r1], mode='concat', concat_axis=-1)
 
+    # after_dp1 = TimeDistributed(Dropout(0.5))(merged1)
+
     # LSTM 2 input
-    #lstm_f2 = LSTM(output_dim=hidden_units,return_sequences=True)(merged1)
-    #lstm_r2 = LSTM(output_dim=hidden_units,return_sequences=True,go_backwards=True)(merged1)
-    #merged2 = merge([lstm_f2, lstm_r2], mode='concat', concat_axis=-1)
+    # lstm_f2 = LSTM(output_dim=hidden_units,return_sequences=True)(after_dp1)
+    # lstm_r2 = LSTM(output_dim=hidden_units,return_sequences=True,go_backwards=True)(merged1)
+    # merged2 = merge([lstm_f2, lstm_r2], mode='concat', concat_axis=-1)
 
     # Dropout
     after_dp = TimeDistributed(Dropout(0.5))(merged1)
 
     # fully connected layer
-    fc1 = TimeDistributed(Dense(output_dim=256, activation='sigmoid'))(after_dp)
-    after_dp2 = TimeDistributed(Dropout(0.50))(fc1)
-    fc2 = TimeDistributed(Dense(output_dim=nb_classes, activation='softmax'))(after_dp2)
+    fc1 = TimeDistributed(Dense(output_dim=128, activation='sigmoid'))(after_dp)
+    # after_dp2 = TimeDistributed(Dropout(0.25))(fc1)
+    fc2 = TimeDistributed(Dense(output_dim=nb_classes, activation='softmax'))(fc1)
 
     model = Model(input=[char_seqs, word_input], output=fc2)
 
